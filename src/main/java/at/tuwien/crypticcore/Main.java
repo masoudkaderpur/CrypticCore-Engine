@@ -1,20 +1,22 @@
 package at.tuwien.crypticcore;
 
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         if (args.length != 4) {
             System.out.println("correct syntax: java -jar CrypticCore.jar <mode> <input> <output> <key>");
             System.exit(1);
             return;
         }
 
-        String mode = args[0], input = args[1], output = args[2], password = args[3];
+        String mode = args[0], input = args[1], output = args[2], password = args[3], tempOutput = output + ".tmp";
 
         CipherAlgorithm xor = new XorCipher();
         EncryptionEngine engine = new EncryptionEngine(xor);
@@ -23,17 +25,23 @@ public class Main {
 
         try {
             CrypticMode crypticMode = CrypticMode.fromString(mode);
+            long rawSize = Files.size(Paths.get(input)), sizeForProgress;
+            if (crypticMode == CrypticMode.DECRYPTION) {
+                if (rawSize < 4) throw new IllegalArgumentException("Invalid file: Too small for header.");
+                else sizeForProgress = rawSize - 4;
+            } else {
+                sizeForProgress = rawSize;
+            }
 
             long start = System.nanoTime();
-            engine.processFile(crypticMode, input, output, key);
+            engine.processFile(crypticMode, input, tempOutput, key, sizeForProgress);
             long end = System.nanoTime();
 
-            Arrays.fill(key, (byte) 0);
+            Files.move(Paths.get(tempOutput), Paths.get(output), StandardCopyOption.REPLACE_EXISTING);
 
             long durationNs = end - start;
             double seconds = durationNs / 1_000_000_000.0;
-            long bytes = Files.size(Paths.get(input));
-            double megabytes = bytes / (1024.0 * 1024.0);
+            double megabytes = rawSize / (1024.0 * 1024.0);
             double throughput = megabytes / seconds;
             double durationMs = durationNs / 1_000_000.0;
 
@@ -49,7 +57,10 @@ public class Main {
 
 
         } catch (Exception e) {
+            Files.deleteIfExists(Paths.get(tempOutput));
             System.out.println("Error:" + e.getMessage());
+        } finally {
+            Arrays.fill(key, (byte) 0);
         }
     }
 }
