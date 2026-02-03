@@ -77,12 +77,12 @@ java -jar CrypticCore.jar <mode> <input> <output> <key>
 
 The project follows a rigorous testing strategy to ensure data integrity and system stability:
 
-### 6.1 Unit Testing (Cryptographic Core)
+### 5.1 Unit Testing (Cryptographic Core)
 
 * **Involution Property:** Verified that $E_k(D_k(P)) = P$.
 * **Edge Cases:** Tested with byte boundaries ($0x00, 0xFF, 0x7F, 0x80$) to prevent sign-extension issues.
 
-### 6.2 Integration Testing (Engine Pipeline)
+### 5.2 Integration Testing (Engine Pipeline)
 
 * **End-to-End Cycle:** Successful encryption and decryption of real file streams.
 * **Atomic Integrity:** Verification of the `.tmp` staging and atomic move strategy.
