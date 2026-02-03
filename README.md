@@ -46,31 +46,57 @@ $$i_{key} = i_{file} \pmod{L_{key}}$$
 In the Java Virtual Machine, bitwise operations on `byte` types involve an implicit promotion to a 32-bit `int`. This
 promotion performs a sign extension, where the sign bit (MSB) is propagated across the upper 24 bits.
 
-To preserve the integrity of the 8-bit data and prevent unintended sign extension, a bitmask of $0xFF$ is applied to the
-raw bytes:
+To preserve the integrity of the 8-bit data and prevent unintended sign extension, a bitmask of $0xFF$ is applied:
 $$B_{safe} = (B_{raw} \ \& \ 0xFF)$$
 
-This ensures the operation is performed on the unsigned representation, maintaining bit-level consistency across all
-byte values ($0$ to $255$):
+This ensures bit-level consistency across all byte values ($0$ to $255$):
 $$Result = (byte) ((P \ \& \ 0xFF) \oplus (K \ \& \ 0xFF))$$
 
 ### 2.2 Memory Efficiency (Buffering Strategy)
 
-The engine is designed for $O(1)$ space complexity. Instead of loading the entire file into the Primary Partition (RAM),
-the data is processed in discrete chunks (buffers).
+The engine is designed for $O(1)$ space complexity. Instead of loading the entire file into RAM, data is processed in
+discrete chunks.
 
-**Processing Logic:**
-For a given buffer $B$ of size $L_{buf}$ and a file of total size $S$:
-
-* Total iterations required: $N = \lceil S / L_{buf} \rceil$
-* Actual bytes processed per iteration: $n \in \mathbb{N}, n \le L_{buf}$
+* **Buffer Size**: Fixed at 8192 bytes (8 KB).
+* **Processing Logic**: The engine explicitly handles the final buffer iteration by using the actual number of bytes
+  read ($n$), ensuring that no padding bytes are appended to the output file.
+* **Stream Integrity**: During decryption, the file pointer is advanced by 4 bytes (header size) before the
+  transformation loop begins.
 
 ---
 
-## 3. Project Structure
+## 3. File Format Specification
 
-The project follows the standard Maven directory layout to ensure a strict separation of concerns:
+To ensure file integrity and prevent the processing of incompatible data, the engine prepends a metadata header to every
+encrypted file.
 
-* **`src/main/java`**: Production code, including the `CipherAlgorithm` interface and `XorCipher` implementation.
-* **`src/test/java`**: Automated unit tests using JUnit 5 to ensure cryptographic integrity.
-* **`pom.xml`**: Project Object Model for dependency management and build lifecycle.
+### 3.1 Custom File Header
+
+The engine validates this header during the decryption phase. If the magic number is missing or the version is
+incompatible, an `IOException` is raised.
+
+| Offset | Length  | Description        | Value (Hex / ASCII) |
+|:-------|:--------|:-------------------|:--------------------|
+| 0x00   | 3 Bytes | Magic Number (CCE) | `0x43 0x43 0x45`    |
+| 0x03   | 1 Byte  | Format Version     | `0x01`              |
+
+---
+
+## 4. Project Structure
+
+The project follows the standard Maven directory layout:
+
+* **`src/main/java`**: Core logic, `CipherAlgorithm` interface, and `XorCipher` implementation.
+* **`src/test/java`**: Automated JUnit 5 unit tests for cryptographic integrity.
+* **`pom.xml`**: Build configuration and metadata.
+
+---
+
+## 5. Usage
+
+### 5.1 Running the Application
+
+The application requires four mandatory command-line arguments:
+
+```bash
+java -jar CrypticCore.jar <mode> <input> <output> <key>

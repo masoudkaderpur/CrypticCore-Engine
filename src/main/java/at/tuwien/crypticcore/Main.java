@@ -1,34 +1,33 @@
 package at.tuwien.crypticcore;
 
-import java.io.IOException;
+
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public class Main {
-    public static void main (String[] args) {
-        String originalFile = "test.txt";
-        String encryptedFile = "test.enc";
-        String decryptedFile = "test_back.txt";
+    public static void main(String[] args) {
+        if (args.length != 4) {
+            System.out.println("correct syntax: java -jar CrypticCore.jar <mode> <input> <output> <key>");
+            System.exit(1);
+            return;
+        }
+
+        String mode = args[0], input = args[1], output = args[2], password = args[3];
+
+        CipherAlgorithm xor = new XorCipher();
+        EncryptionEngine engine = new EncryptionEngine(xor);
+
+        byte[] key = password.getBytes(StandardCharsets.UTF_8);
 
         try {
-            Files.writeString (Paths.get (originalFile), "This is a secret message!");
+            CryptionMode cryptionMode = null;
+            if (mode.equals("encrypt") || mode.equals("encryption")) cryptionMode = CryptionMode.ENCRYPTION;
+            else if (mode.equals("decrypt") || mode.equals("decryption")) cryptionMode = CryptionMode.DECRYPTION;
+            else throw new IllegalArgumentException("The CryptionMode can either be encrypti or decrypt");
 
-            CipherAlgorithm xor = new XorCipher ();
-            EncryptionEngine engine = new EncryptionEngine (xor);
-
-            byte[] key = "TUWien2026".getBytes (StandardCharsets.UTF_8);
-
-            System.out.println ("encrypting...");
-            engine.processFile (originalFile, encryptedFile, key);
-
-            System.out.println ("decrypting...");
-            engine.processFile (encryptedFile, decryptedFile, key);
-
-            System.out.println ("comparing...");
-
-        } catch (IOException e) {
-            System.err.println ("Fehler beim Verarbeiten der Dateien: " + e.getMessage ());
+            engine.processFile(cryptionMode, input, output, key);
+            System.out.println("Data successfully processed");
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
     }
 }
