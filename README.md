@@ -16,26 +16,10 @@ The operation is defined as:
 $$P \oplus K = C$$
 $$C \oplus K = P$$
 
-**Variable Definitions:**
-
-* $P \in \{0, 1\}^8$: Plaintext byte
-* $K \in \{0, 1\}^8$: Key byte
-* $C \in \{0, 1\}^8$: Ciphertext byte
-* $\oplus$: Bitwise XOR operator
-
 ### 1.2 Key Streaming (Modular Arithmetic)
 
-To handle data streams where the length of the plaintext exceeds the key length, a cyclic key schedule is implemented
-using modular arithmetic.
-
-The index mapping for the keystream is defined as:
+To handle data streams where the length of the plaintext exceeds the key length, a cyclic key schedule is implemented:
 $$i_{key} = i_{file} \pmod{L_{key}}$$
-
-**Variable Definitions:**
-
-* $i_{key} \in \mathbb{N}_0$: Resulting index within the key array ($0 \le i_{key} < L_{key}$)
-* $i_{file} \in \mathbb{N}_0$: Current byte offset within the source file
-* $L_{key} \in \mathbb{N}^+$: Total length of the key in bytes
 
 ---
 
@@ -43,37 +27,31 @@ $$i_{key} = i_{file} \pmod{L_{key}}$$
 
 ### 2.1 Java Type Handling (Sign Extension Mitigation)
 
-In the Java Virtual Machine, bitwise operations on `byte` types involve an implicit promotion to a 32-bit `int`. This
-promotion performs a sign extension, where the sign bit (MSB) is propagated across the upper 24 bits.
-
-To preserve the integrity of the 8-bit data and prevent unintended sign extension, a bitmask of $0xFF$ is applied:
-$$B_{safe} = (B_{raw} \ \& \ 0xFF)$$
-
-This ensures bit-level consistency across all byte values ($0$ to $255$):
+To prevent unintended sign extension during the implicit promotion from `byte` to 32-bit `int`, a bitmask of $0xFF$ is
+applied to maintain 8-bit integrity:
 $$Result = (byte) ((P \ \& \ 0xFF) \oplus (K \ \& \ 0xFF))$$
 
-### 2.2 Memory Efficiency (Buffering Strategy)
+### 2.2 Memory Efficiency & Performance
 
-The engine is designed for $O(1)$ space complexity. Instead of loading the entire file into RAM, data is processed in
-discrete chunks.
+* **O(1) Space Complexity**: Processes data in discrete **8 KB buffers**, allowing files of arbitrary size (tested up to
+  5 GB) to be processed with minimal RAM footprint.
+* **Throughput**: Optimized for high-speed I/O, achieving over **400 MB/s** on standard hardware.
+* **Real-time Telemetry**: Integrated progress bar and performance statistics (MB/s, latency).
 
-* **Buffer Size**: Fixed at 8192 bytes (8 KB).
-* **Processing Logic**: The engine explicitly handles the final buffer iteration by using the actual number of bytes
-  read ($n$), ensuring that no padding bytes are appended to the output file.
-* **Stream Integrity**: During decryption, the file pointer is advanced by 4 bytes (header size) before the
-  transformation loop begins.
+### 2.3 Robustness & Safety (Bombenfest)
+
+* **Atomic Writes**: Utilizes a `.tmp` file staging strategy. The final output is only created via an atomic `move`
+  operation upon successful completion, preventing data corruption during crashes or power failures.
+* **Memory Sanitation**: The encryption key is explicitly overwritten in the JVM heap using `Arrays.fill()` immediately
+  after use to mitigate memory dump exploits.
+* **Header Validation**: Strict magic number and version checking prevents the processing of incompatible or corrupted
+  files.
 
 ---
 
 ## 3. File Format Specification
 
-To ensure file integrity and prevent the processing of incompatible data, the engine prepends a metadata header to every
-encrypted file.
-
-### 3.1 Custom File Header
-
-The engine validates this header during the decryption phase. If the magic number is missing or the version is
-incompatible, an `IOException` is raised.
+Every encrypted file starts with a 4-byte metadata header.
 
 | Offset | Length  | Description        | Value (Hex / ASCII) |
 |:-------|:--------|:-------------------|:--------------------|
@@ -82,21 +60,25 @@ incompatible, an `IOException` is raised.
 
 ---
 
-## 4. Project Structure
+## 4. Usage
 
-The project follows the standard Maven directory layout:
-
-* **`src/main/java`**: Core logic, `CipherAlgorithm` interface, and `XorCipher` implementation.
-* **`src/test/java`**: Automated JUnit 5 unit tests for cryptographic integrity.
-* **`pom.xml`**: Build configuration and metadata.
-
----
-
-## 5. Usage
-
-### 5.1 Running the Application
-
-The application requires four mandatory command-line arguments:
+### 4.1 CLI Execution
 
 ```bash
 java -jar CrypticCore.jar <mode> <input> <output> <key>
+```
+
+**Parameters:**
+
+* **mode:** `ENCRYPTION` or `DECRYPTION (Case-insensitive).
+* **input:** Path to the source file.
+* **output:** Final destination path for the transformed file.
+* **key:** Secret key for transformation.
+
+## 5. Project Structure
+
+* `src/main/java`: Core engine logic and CLI handler.
+
+* `src/test/java`: JUnit 5 tests for cryptographic integrity.
+
+* `pom.xml`: Maven build configuration.

@@ -1,17 +1,43 @@
 package at.tuwien.crypticcore;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-public class XorCipherTest {
+@DisplayName("Unit Tests: Cryptographic Logic")
+class XorCipherTest {
+
+    private final CipherAlgorithm algorithm = new XorCipher();
+
     @Test
-    public void testXor () {
-        CipherAlgorithm algorithm = new XorCipher ();
-        byte original = 122;
-        byte key = 3;
-        byte encrypted = algorithm.transform (original, key);
-        byte decrypted = algorithm.transform (encrypted, key);
-        assertEquals (original, decrypted, "decrypted byte should be equal to original byte");
+    @DisplayName("Should correctly encrypt and decrypt (Involution)")
+    void testInvolution() {
+        byte original = 0x41;
+        byte key = 0x2A;
+        byte encrypted = algorithm.transform(original, key);
+
+        assertNotEquals(original, encrypted, "Ciphertext must differ from Plaintext");
+        assertEquals(original, algorithm.transform(encrypted, key), "Double XOR must return original");
+    }
+
+    @ParameterizedTest
+    @ValueSource(bytes = {0, -1, 127, -128})
+    @DisplayName("Edge Cases: Extreme byte values and signs")
+    void testEdgeCaseBytes(byte b) {
+        byte key = (byte) 0xAA;
+        byte encrypted = algorithm.transform(b, key);
+        assertEquals(b, algorithm.transform(encrypted, key), "Failed at byte: " + b);
+    }
+
+
+    @Test
+    @DisplayName("Identity: XOR with 0 should not change data")
+    void testZeroKey() {
+        byte data = 0x55;
+        assertEquals(data, algorithm.transform(data, (byte) 0));
     }
 }

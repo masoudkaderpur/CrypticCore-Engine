@@ -18,7 +18,7 @@ public class EncryptionEngine {
         this.algorithm = algorithm;
     }
 
-    public void processFile(CryptionMode mode, String inputPath, String outputPath, byte[] key) throws IOException {
+    public void processFile(CrypticMode mode, String inputPath, String outputPath, byte[] key) throws IOException {
         if (mode == null) throw new IllegalArgumentException("Mode must not be null");
 
         Path inPath = Paths.get(inputPath);
@@ -37,11 +37,14 @@ public class EncryptionEngine {
         byte[] buffer = new byte[8192];
         int bytesRead, keyPointer = 0;
 
+        long totalBytesProcessed = 0;
+        int lastPercentage = -1;
+
         try (FileInputStream in = new FileInputStream(inputPath); FileOutputStream out = new FileOutputStream(outputPath)) {
-            if (mode == CryptionMode.ENCRYPTION) {
+            if (mode == CrypticMode.ENCRYPTION) {
                 out.write(MAGIC_NUMBER);
                 out.write(VERSION);
-            } else if (mode == CryptionMode.DECRYPTION) {
+            } else if (mode == CrypticMode.DECRYPTION) {
                 byte[] fileMagic = new byte[3];
                 if (in.read(fileMagic) != 3 || !Arrays.equals(fileMagic, MAGIC_NUMBER)) {
                     throw new IOException("Incorrect CrypticCore-Engine Data!");
@@ -52,13 +55,34 @@ public class EncryptionEngine {
                 }
             } else return;
 
+            totalBytesProcessed += 4;
+
             while ((bytesRead = in.read(buffer)) != -1) {
                 for (int i = 0; i < bytesRead; i++) {
                     if (keyPointer == key.length) keyPointer = 0;
                     buffer[i] = algorithm.transform(buffer[i], key[keyPointer++]);
                 }
                 out.write(buffer, 0, bytesRead);
+
+                totalBytesProcessed += bytesRead;
+                long fileSize = Files.size(Path.of(inputPath));
+                int currentPercentage = (int) ((totalBytesProcessed * 100) / fileSize);
+
+                if (currentPercentage > lastPercentage) {
+                    printProgress(currentPercentage);
+                    lastPercentage = currentPercentage;
+                }
             }
         }
+    }
+
+    private void printProgress(int percentage) {
+        System.out.print("\rProgress: [");
+        int bars = percentage / 2;
+        for (int i = 0; i < 50; i++) {
+            if (i < bars) System.out.print("=");
+            else System.out.print(" ");
+        }
+        System.out.print("] " + percentage + "%");
     }
 }
