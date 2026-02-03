@@ -29,7 +29,7 @@ $$i_{key} = i_{file} \pmod{L_{key}}$$
 
 To prevent unintended sign extension during the implicit promotion from `byte` to 32-bit `int`, a bitmask of $0xFF$ is
 applied to maintain 8-bit integrity:
-$$Result = (byte) ((P \ \& \ 0xFF) \oplus (K \ \& \ 0xFF))$$
+$$Result = (byte) ((P \text{ & } 0xFF) \oplus (K \text{ & } 0xFF))$$
 
 ### 2.2 Memory Efficiency & Performance
 
