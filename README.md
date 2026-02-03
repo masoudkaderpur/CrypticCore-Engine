@@ -62,23 +62,36 @@ Every encrypted file starts with a 4-byte metadata header.
 
 ## 4. Usage
 
-### 4.1 CLI Execution
-
 ```bash
 java -jar CrypticCore.jar <mode> <input> <output> <key>
 ```
 
 **Parameters:**
 
-* **mode:** `ENCRYPTION` or `DECRYPTION (Case-insensitive).
+* **mode:** `ENCRYPTION` or `DECRYPTION` (Case-insensitive).
 * **input:** Path to the source file.
 * **output:** Final destination path for the transformed file.
 * **key:** Secret key for transformation.
 
-## 5. Project Structure
+## 5. Quality Assurance
+
+The project follows a rigorous testing strategy to ensure data integrity and system stability:
+
+### 6.1 Unit Testing (Cryptographic Core)
+
+* **Involution Property:** Verified that $E_k(D_k(P)) = P$.
+* **Edge Cases:** Tested with byte boundaries ($0x00, 0xFF, 0x7F, 0x80$) to prevent sign-extension issues.
+
+### 6.2 Integration Testing (Engine Pipeline)
+
+* **End-to-End Cycle:** Successful encryption and decryption of real file streams.
+* **Atomic Integrity:** Verification of the `.tmp` staging and atomic move strategy.
+* **Error Resilience:** * Detection of truncated files (Expected vs. Actual size check).
+    * Prevention of in-place corruption (Same-file validation).
+    * Robust header and version validation.
+
+## 6. Project Structure
 
 * `src/main/java`: Core engine logic and CLI handler.
-
 * `src/test/java`: JUnit 5 tests for cryptographic integrity.
-
 * `pom.xml`: Maven build configuration.
