@@ -1,5 +1,30 @@
 package at.tuwien.crypticcore;
 
+/**
+ * Represents a functional strategy for single-byte cryptographic transformations.
+ * <p>This interface serves as a contract for symmetric or asymmetric primitive
+ * operations where a data unit is transformed using a specific key unit.
+ * Implementations must ensure that the transformation is deterministic for
+ * any given pair of inputs.</p>
+ *
+ * @author Masoud Kaderpur
+ * @version 1.0
+ */
+@FunctionalInterface
 public interface CipherAlgorithm {
-    byte transform (byte data, byte key);
+  /**
+   * Transforms a single byte of data using the provided key byte.
+   * <p>This method defines the core atomic operation of the cipher. Depending
+   * on the implementation, this may represent an encryption, decryption,
+   * or obfuscation step (e.g., a XOR-based stream cipher or a substitution box).</p>
+   *
+   * @param data the byte to be transformed; usually represents plaintext or ciphertext
+   * @param key  the byte used to influence the transformation logic
+   * @return the resulting transformed byte
+   * @throws ArithmeticException if the transformation encounters an
+   *                             unrecoverable mathematical error (implementation dependent)
+   * @apiNote In high-performance scenarios, consider the overhead of
+   * primitive boxing if this method is called within a tight loop.
+   */
+  byte transform(byte data, byte key);
 }
